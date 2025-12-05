@@ -1,16 +1,118 @@
-# task_word_explainability
+# Task Word Explainability — Reproduction Study
 
-Code for: S Agarwal, YR Semenov, W Lotter. Representing visual classification as a linear combination of words. _Proceedings of the 3rd Machine Learning for Health symposium, PMLR_ (2023).
+This repository contains a reproduction of the paper:
+
+**Agarwal et al., 2023 — “Representing Visual Classification as a Linear Combination of Words”  
+Machine Learning for Healthcare (ML4H)**
+
+The original paper proposes a simple but interpretable approach for visual classification: instead of training a deep model end-to-end, the authors use CLIP text embeddings as a linear basis for prediction, producing “word weights” that indicate which words help explain a classification decision.
+
+This reproduction focuses on:
+
+- Re-implementing the core word-weight linear model  
+- Training the method on the SIIM-ISIC Melanoma dataset  
+- Evaluating accuracy and AUROC  
+- Visualizing learned word-importance scores  
+- Comparing results against the original paper’s reported performance  
+
+---
+
+## Installation
+
+Clone the repository:
+
+    git clone https://github.com/andyroo123/task_word_explainability_reproduction
+    cd task_word_explainability_reproduction
+
+Install dependencies:
+
+    pip install -r requirements.txt
+
+Install CLIP:
+
+    pip install git+https://github.com/openai/CLIP.git
+
+---
+
+## Dataset Setup (SIIM-ISIC)
+
+Download the SIIM-ISIC 2020 Kaggle dataset and place it in the following structure:
+
+    data/
+      train/
+        image1.png
+        image2.png
+        ...
+
+The scripts assume a standard train folder and a CSV file with metadata and melanoma labels.
+
+---
+
+## Running the Model
+
+### 1. Configure CLIP
+
+Run:
+
+    python configure_clip.py
+
+This verifies CLIP installation and prepares embedding utilities.
+
+---
+
+### 2. Train the Word-Weight Model
+
+Run:
+
+    python fit_words.py --dataset siim-isic --save_dir results/melanoma/
+
+This script:
+
+- Loads CLIP image embeddings  
+- Builds a vocabulary of candidate words from the CLIP tokenizer  
+- Solves a regularized linear regression (L1) connecting word embeddings to labels  
+- Saves model weights, scores, and outputs  
+
+Results include AUROC, accuracy, prediction scores, and the full word-weight vector.
+
+---
+
+### 3. Plot Word Weights
+
+Run:
+
+    python plotting.py results/melanoma/weights.npy
+
+This generates:
+
+- Sorted word weight plots  
+- Positive vs. negative contributing words  
+- Visual summaries of interpretability patterns  
+
+Plots are saved to:
+
+    results/melanoma/
 
 
-![methods_fig](https://github.com/lotterlab/task_word_explainability/assets/5847322/fc43075a-e1fd-4171-a659-c66c7e4f8fc7)
+---
 
+## Notes
 
-## Set-up/Requirements
-1. Install CLIP and its dependencies by following instructions at: https://github.com/openai/CLIP
-2. Install packages in `requirements.txt` in order to run all scripts. The code should generally be version agnostic for these packages.
+- Experiments use CLIP ViT-B/32 by default.  
+- Word vocabulary originates from CLIP’s tokenizer.  
+- L1 regularization encourages sparse, interpretable word weight vectors.  
+- Regression is implemented using scikit-learn’s Lasso or an equivalent solver.
 
-## Usage
-`fit_words.py`: Illustrates fitting a linear classifier based on CLIP image embeddings and subquently estimating the classifier based on a linear combination of word embeddings.
+---
 
-`plotting.py`: Plots the regression word weights.
+## Citation
+
+If you use this reproduction, please cite the original work:
+
+Agarwal, A., et al. “Representing Visual Classification as a Linear Combination of Words.” ML4H 2023.
+
+---
+
+## Contact
+
+For questions or suggestions, open an issue on the repository.
