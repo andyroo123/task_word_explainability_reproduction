@@ -22,7 +22,12 @@ def make_word_weights_plot(word_df, base_save_path):
     norm = plt.Normalize(vmin=np.min(y), vmax=np.max(y))
     plt.bar(x, y, color=colors, edgecolor="black")
     ax = plt.gca()
+    # X ticks
+    ax.set_xticks(np.arange(len(x)))
     ax.set_xticklabels(x, ha="right", rotation=60, rotation_mode='anchor', fontweight="bold")
+
+    # Y ticks
+    ax.set_yticks(ax.get_yticks())
     ax.set_yticklabels(np.round(ax.get_yticks(), 2), fontweight="bold")
     plt.ylabel("Malignancy Weight", fontweight="bold", size=14)
     sns.despine(top=True, right=True)
@@ -33,7 +38,7 @@ def make_word_weights_plot(word_df, base_save_path):
 
 
 if __name__ == '__main__':
-    save_tag = 'cbis'
+    save_tag = 'melanoma'
 
     save_dir = f'./results/{save_tag}/'
     word_df = pd.read_csv(save_dir + f'word_weights-{save_tag}.csv', index_col=0)

@@ -10,19 +10,54 @@ from sklearn.linear_model import LogisticRegression, LinearRegression
 import os
 import imageio
 import cv2
+import torch_directml
 
 
 def process_dcm(file_path):
     ds = pydicom.dcmread(file_path)
-    im = ds.pixel_array
-    im = im.astype(float)
-    # simple normalization, convert to RGB
-    im = im / im.max()
-    im2 = np.zeros(list(im.shape) + [3])
-    for i in range(3):
-        im2[:, :, i] = im
-    im = (255 * im2).astype(np.uint8)
+    im = ds.pixel_array.astype(float)
 
+    # normalize safely
+    max_val = im.max()
+    if max_val > 0:
+        im = im / max_val
+
+    # Handle dimensions:
+    # - 2D: (H, W) → stack to (H, W, 3)
+    # - 3D: assume last dim might be channels or frames
+    if im.ndim == 2:
+        # grayscale → make 3-channel RGB
+        im = np.stack([im] * 3, axis=-1)  # (H, W, 3)
+
+    elif im.ndim == 3:
+        # cases:
+        # (H, W, C) where C == 1 or 3 or more
+        # or (N, H, W) where N is frames; take first
+        if im.shape[-1] in (1, 3, 4):
+            # already (H,W,channels)-ish
+            if im.shape[-1] == 1:
+                # single channel → repeat to 3
+                im = np.repeat(im, 3, axis=-1)
+            elif im.shape[-1] > 3:
+                # trim extra channels
+                im = im[..., :3]
+        else:
+            # likely (N, H, W) → take first frame
+            im = im[0]
+            if im.ndim == 2:
+                im = np.stack([im] * 3, axis=-1)
+            elif im.ndim == 3 and im.shape[-1] == 1:
+                im = np.repeat(im, 3, axis=-1)
+
+    # final safety: if still not (H, W, 3), squeeze leading dims
+    while im.ndim > 3:
+        im = im[0]
+    if im.ndim == 2:
+        im = np.stack([im] * 3, axis=-1)
+    if im.ndim == 3 and im.shape[-1] > 3:
+        im = im[..., :3]
+
+    im = (255 * im).clip(0, 255).astype(np.uint8)
     return im
 
 
@@ -43,6 +78,7 @@ def create_clip_feature_mat(file_list, clip_model, preprocess_fxn):
 
 def fit_words(train_df, test_df, device, word_list, save_dir, save_tag):
     clip_model, preprocess_fxn = clip.load("ViT-B/32", device=device)
+    clip_model = clip_model.to(device)
     X_train = create_clip_feature_mat(train_df.file_path.values, clip_model, preprocess_fxn)
 
     classifier = LogisticRegression(random_state=0, C=1, max_iter=1000, verbose=1, fit_intercept=False)
@@ -124,8 +160,8 @@ def get_prototypes(df, words, device, save_dir, n_save=20):
 
 
 if __name__ == '__main__':
-    dataset_name = 'cbis'
-    device = 'cuda:0'
+    dataset_name = 'melanoma'
+    device = torch_directml.device()
 
     # assumes a csv with columns containing file_path and label
     if dataset_name == 'cbis':
