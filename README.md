@@ -66,6 +66,9 @@ Run:
 
     python fit_words.py --dataset siim-isic --save_dir results/melanoma/
 
+To run model with vocab prunning run:
+    python fit_words_vocab_prunning.py --dataset siim-isic --save_dir results/melanoma/
+
 This script:
 
 - Loads CLIP image embeddings  
